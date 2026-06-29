@@ -1,0 +1,13 @@
+# Entornos virtuales
+.venv/
+venv/
+__pycache__/
+
+# Datos y pesos del modelo
+data/
+*.pth
+*.safetensors
+
+# Otros
+.env
+.ipynb_checkpoints/
