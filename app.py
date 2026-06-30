@@ -3,25 +3,25 @@ import torch
 import torch.nn as nn
 from torchvision import models, transforms
 from PIL import Image
+from facenet_pytorch import MTCNN 
 
-# 1. Define the classes in the exact order the DataLoader assigned them
-classes = ['angry', 'disgust', 'fear', 'happy', 'neutral', 'sad', 'surprise']
+# 1. Definir las clases
+classes = ['Angry', 'Disgust', 'Fear', 'Happy', 'Neutral', 'Sad', 'Surprise']
 
-# 2. Reconstruct the architecture and load weights
-def load_model():
-    # Instantiate ResNet18 without pre-trained ImageNet weights
+# 2. Cargar tu modelo ResNet18
+def load_emotion_model():
     model = models.resnet18(weights=None) 
     num_ftrs = model.fc.in_features
     model.fc = nn.Linear(num_ftrs, len(classes))
-    
-    # Load your trained weights, forcing CPU execution for the free HF Space tier
     model.load_state_dict(torch.load('fer_resnet18.pth', map_location=torch.device('cpu')))
     model.eval()
     return model
 
-model = load_model()
+emotion_model = load_emotion_model()
 
-# 3. Define the exact same validation transforms used during training
+face_detector = MTCNN(keep_all=False, device='cpu')
+
+# 4. Transformaciones PyTorch
 transform = transforms.Compose([
     transforms.Grayscale(num_output_channels=3),
     transforms.Resize((224, 224)),
@@ -29,31 +29,33 @@ transform = transforms.Compose([
     transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 ])
 
-# 4. Prediction function
+
 def predict_emotion(image):
-    # Ensure the input is a PIL image
     if not isinstance(image, Image.Image):
         image = Image.fromarray(image)
+    boxes, _ = face_detector.detect(image)
+    if boxes is not None:
+        box = boxes[0]
+        face_img = image.crop((box[0], box[1], box[2], box[3]))
+    else:
+        face_img = image
         
-    # Apply transformations and add a batch dimension: [1, 3, 224, 224]
-    input_tensor = transform(image).unsqueeze(0) 
+    input_tensor = transform(face_img).unsqueeze(0) 
     
     with torch.no_grad():
-        outputs = model(input_tensor)
+        outputs = emotion_model(input_tensor)
         probabilities = torch.nn.functional.softmax(outputs[0], dim=0)
         
-    # Return a dictionary formatted for Gradio's Label component
     return {classes[i]: float(probabilities[i]) for i in range(len(classes))}
 
-# 5. Gradio Interface
-interface = gr.Interface(
+# 6. Interfaz de Gradio
+interfaz = gr.Interface(
     fn=predict_emotion,
-    inputs=gr.Image(type="pil", sources=["upload", "webcam"], label="Upload an Image or use Webcam"),
-    outputs=gr.Label(num_top_classes=3, label="Predicted Emotion"),
-    title="Facial Expression Recognition (FER)",
-    description="Custom ResNet18 model trained to detect 7 human emotions."
+    inputs=gr.Image(type="pil", sources=["upload", "webcam"], label="Sube una foto (cuerpo completo o rostro)"),
+    outputs=gr.Label(num_top_classes=3, label="Emoción de la Cara Detectada"),
+    title="Reconocimiento Facial Inteligente",
+    description="Pipeline de dos etapas: Usa MTCNN para ubicar el rostro en la foto y ResNet18 para clasificar la emoción."
 )
 
 if __name__ == "__main__":
-    # Launch the web server locally
-    interface.launch()
+    interfaz.launch()
