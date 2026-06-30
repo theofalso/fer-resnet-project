@@ -9,7 +9,7 @@ An end-to-end Machine Learning pipeline for Facial Expression Recognition, built
 ## Live Demo
 
 You can test the model directly using your webcam or by uploading an image here:  
-**[Try the App on Hugging Face Spaces](https://huggingface.co/spaces/theofalso/fer-resnet)**
+**[Try the App on Hugging Face Spaces](https://huggingface.co/spaces/theofalso/recognize-facial-expression)**
 
 ## Technical Overview
 
