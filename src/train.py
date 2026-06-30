@@ -26,7 +26,7 @@ def train_model(num_epochs=15, learning_rate=0.001):
         model.train()
         running_loss = 0.0
 
-        for inputs, labels in train_loader:
+        for i, (inputs, labels) in enumerate(train_loader):
             inputs, labels = inputs.to(device), labels.to(device)
 
             # Zero the parameter gradients
@@ -41,6 +41,10 @@ def train_model(num_epochs=15, learning_rate=0.001):
             optimizer.step()
 
             running_loss += loss.item() * inputs.size(0)
+
+            # --- NUEVO: Imprimir el progreso cada 100 batches ---
+            if (i + 1) % 100 == 0:
+                print(f"   -> Procesando batch {i + 1}/{len(train_loader)} | Loss: {loss.item():.4f}")
 
         epoch_loss = running_loss / len(train_loader.dataset)
 
